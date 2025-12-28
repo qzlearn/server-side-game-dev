@@ -1,7 +1,7 @@
 {
   "name": "server-side-game-dev-plugin",
   "version": "3.0.0",
-  "description": "Comprehensive server-side game development plugin aligned with roadmap.sh/server-side-game-developer - 17 skills covering networking, concurrency, databases, and cloud deployment",
+  "description": "Comprehensive server-side game development plugin - 17 skills covering networking, concurrency, databases, and cloud deployment",
   "author": {
     "name": "Dr. Umit Kacar & Muhsin Elcicek",
     "email": "kacarumit.phd@gmail.com"
