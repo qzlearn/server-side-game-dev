@@ -1,0 +1,171 @@
+# Game Server Monitoring Dashboard
+# Essential metrics and alerting
+
+metric_categories:
+  server_health:
+    cpu_usage:
+      type: gauge
+      unit: percent
+      alert_threshold: 80%
+      critical_threshold: 95%
+
+    memory_usage:
+      type: gauge
+      unit: percent
+      alert_threshold: 75%
+      critical_threshold: 90%
+
+    tick_duration:
+      type: histogram
+      unit: milliseconds
+      buckets: [1, 2, 5, 10, 16, 20, 50, 100]
+      alert: "p99 > tick_budget"
+
+    tick_overruns:
+      type: counter
+      alert: ">5% of ticks"
+
+  player_metrics:
+    concurrent_players:
+      type: gauge
+      labels: [region, game_mode]
+
+    player_joins:
+      type: counter
+      rate: per_minute
+
+    player_leaves:
+      type: counter
+      rate: per_minute
+
+    session_duration:
+      type: histogram
+      unit: minutes
+      buckets: [1, 5, 15, 30, 60, 120]
+
+  network_metrics:
+    bytes_sent:
+      type: counter
+      labels: [message_type]
+      rate: per_second
+
+    bytes_received:
+      type: counter
+      rate: per_second
+
+    packet_loss:
+      type: gauge
+      unit: percent
+      alert_threshold: 5%
+
+    latency:
+      type: histogram
+      unit: milliseconds
+      buckets: [10, 25, 50, 100, 200, 500]
+      alert: "p95 > 200ms"
+
+  game_metrics:
+    matches_started:
+      type: counter
+
+    matches_completed:
+      type: counter
+
+    match_duration:
+      type: histogram
+      unit: minutes
+
+    entities_active:
+      type: gauge
+      labels: [entity_type]
+
+    actions_per_second:
+      type: counter
+      rate: per_second
+
+alerting_rules:
+  critical:
+    - name: server_down
+      condition: "up == 0"
+      action: page_oncall
+
+    - name: high_cpu
+      condition: "cpu_usage > 95% for 5m"
+      action: page_oncall
+
+    - name: tick_failures
+      condition: "tick_overruns > 20% for 1m"
+      action: page_oncall
+
+  warning:
+    - name: elevated_latency
+      condition: "latency_p95 > 150ms for 5m"
+      action: slack_alert
+
+    - name: player_drop
+      condition: "player_leaves > 2 * player_joins for 10m"
+      action: slack_alert
+
+    - name: memory_pressure
+      condition: "memory_usage > 75% for 15m"
+      action: slack_alert
+
+dashboard_panels:
+  overview:
+    - title: Active Players
+      type: stat
+      query: sum(concurrent_players)
+
+    - title: Server Health
+      type: gauge
+      query: avg(1 - cpu_usage/100)
+
+    - title: Tick Performance
+      type: graph
+      query: histogram_quantile(0.99, tick_duration)
+
+  network:
+    - title: Bandwidth
+      type: graph
+      queries:
+        - bytes_sent_rate
+        - bytes_received_rate
+
+    - title: Latency Distribution
+      type: heatmap
+      query: latency_bucket
+
+    - title: Packet Loss
+      type: graph
+      query: packet_loss
+
+  game:
+    - title: Match Status
+      type: stat
+      queries:
+        - matches_in_progress
+        - matches_queued
+
+    - title: Entity Count
+      type: graph
+      query: sum(entities_active) by (entity_type)
+
+logging:
+  structured_fields:
+    - timestamp
+    - level
+    - server_id
+    - match_id
+    - player_id
+    - message
+
+  log_levels:
+    error: "Unexpected failures"
+    warn: "Degraded performance"
+    info: "Match events, player actions"
+    debug: "Tick details (sampling)"
+
+  retention:
+    hot: 7_days
+    warm: 30_days
+    cold: 365_days

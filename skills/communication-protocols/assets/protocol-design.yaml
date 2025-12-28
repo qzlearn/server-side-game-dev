@@ -1,0 +1,157 @@
+# Game Communication Protocol Design
+# Guidelines for efficient game networking
+
+protocol_layers:
+  transport:
+    tcp:
+      use_for:
+        - login_authentication
+        - matchmaking
+        - chat
+        - reliable_game_events
+      options:
+        - TCP_NODELAY: true
+        - keepalive: true
+
+    udp:
+      use_for:
+        - player_movement
+        - state_snapshots
+        - voice_chat
+        - real_time_updates
+      reliability: application_layer
+
+  application:
+    grpc:
+      use_for:
+        - service_to_service
+        - backend_apis
+        - streaming_updates
+      features:
+        - bidirectional_streaming
+        - built_in_serialization
+        - load_balancing
+
+    websocket:
+      use_for:
+        - browser_games
+        - mobile_games
+        - lobby_systems
+      message_format: json_or_binary
+
+    custom_binary:
+      use_for:
+        - competitive_games
+        - high_frequency_updates
+        - bandwidth_critical
+
+custom_protocol_design:
+  packet_header:
+    fields:
+      - type: uint8  # Message type enum
+      - flags: uint8  # Reliable, compressed, fragmented
+      - length: uint16  # Payload length
+      - sequence: uint32  # Packet number
+      - ack: uint32  # Last received sequence
+      - ack_bits: uint32  # Bitmask of received packets
+    size: 14 bytes
+
+  reliability_layer:
+    for_udp:
+      - sequence_numbers
+      - ack_bitfield
+      - selective_retransmit
+      - rtt_estimation
+
+    message_types:
+      reliable: "Retransmit until acked"
+      unreliable: "Fire and forget"
+      ordered: "Process in sequence"
+      unordered: "Process immediately"
+
+  fragmentation:
+    mtu: 1200  # Safe for most networks
+    fragment_header:
+      - fragment_id: uint16
+      - fragment_num: uint8
+      - total_fragments: uint8
+
+message_types:
+  client_to_server:
+    - type: player_input
+      fields:
+        - tick: uint32
+        - keys: uint8  # Bitmask
+        - aim: int16[2]
+      frequency: 60_per_second
+
+    - type: chat_message
+      fields:
+        - channel: uint8
+        - message: string
+      reliable: true
+
+    - type: action
+      fields:
+        - action_id: uint8
+        - target: uint32
+        - params: bytes
+      reliable: true
+
+  server_to_client:
+    - type: state_snapshot
+      fields:
+        - tick: uint32
+        - player_count: uint8
+        - players: PlayerState[]
+      frequency: 20_60_per_second
+      compression: delta
+
+    - type: event
+      fields:
+        - event_type: uint8
+        - params: bytes
+      reliable: true
+
+grpc_patterns:
+  unary:
+    use_case: "Simple request-response"
+    example: "GetPlayerProfile"
+
+  server_streaming:
+    use_case: "Server pushes updates"
+    example: "MatchmakingUpdates"
+
+  client_streaming:
+    use_case: "Client sends batched data"
+    example: "UploadReplay"
+
+  bidirectional:
+    use_case: "Real-time communication"
+    example: "GameSession"
+
+performance_considerations:
+  bandwidth:
+    - use_delta_compression
+    - quantize_floats
+    - use_bitfields
+    - batch_messages
+
+  latency:
+    - disable_nagle
+    - use_udp_for_realtime
+    - minimize_packet_size
+    - client_side_prediction
+
+  reliability:
+    - implement_ack_system
+    - use_sequence_numbers
+    - handle_packet_loss
+    - detect_duplicates
+
+versioning:
+  strategy: "Protocol version in handshake"
+  compatibility:
+    - new_fields_with_defaults
+    - deprecated_field_handling
+    - graceful_degradation

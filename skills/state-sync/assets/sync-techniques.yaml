@@ -1,0 +1,139 @@
+# State Synchronization Techniques
+# Keeping game state consistent across clients
+
+sync_models:
+  authoritative_server:
+    description: "Server is source of truth"
+    flow: |
+      Client Input → Server Validate → Server Apply → Broadcast
+    benefits:
+      - cheat_prevention
+      - consistent_state
+    drawbacks:
+      - input_latency
+    mitigation: "Client-side prediction"
+
+  client_side_prediction:
+    description: "Client predicts locally, server corrects"
+    flow: |
+      Client Input → Local Apply → Send to Server
+      Server Validate → Server Apply → Send Correction
+      Client Reconcile
+    benefits:
+      - responsive_feel
+      - reduced_perceived_latency
+    drawbacks:
+      - reconciliation_complexity
+      - visual_snapping
+
+  snapshot_interpolation:
+    description: "Buffer snapshots, interpolate between"
+    buffer_size: 3-5_snapshots
+    interpolation_delay: 100ms
+    flow: |
+      Server → Snapshot t0, t1, t2, t3 → Client Buffer
+      Client Render: interpolate(t0, t1, render_time)
+    benefits:
+      - smooth_visuals
+      - handles_jitter
+    drawbacks:
+      - added_latency
+      - buffer_management
+
+techniques:
+  delta_compression:
+    description: "Send only changes from baseline"
+    savings: "50-90%"
+    implementation: |
+      struct DeltaState {
+          uint32_t baseline_tick;
+          uint8_t changed_fields;  // Bitmask
+          // Only changed field values follow
+      };
+
+  interest_management:
+    description: "Send only relevant data"
+    methods:
+      distance_based:
+        radius: 100_units
+        update_rate: varies_by_distance
+
+      aoi_grid:
+        cell_size: 50_units
+        neighbors: adjacent_cells
+
+      priority_queue:
+        sort_by: [distance, relevance, last_update]
+        bandwidth_budget: per_player
+
+  quantization:
+    position:
+      range: [-1000, 1000]
+      bits: 16
+      precision: 3cm
+      savings: 50%
+
+    rotation:
+      method: smallest_three
+      bits: 16x3
+      precision: 0.01_degrees
+      savings: 62%
+
+    velocity:
+      range: [-20, 20]
+      bits: 8x3
+      precision: 0.16_m/s
+      savings: 75%
+
+  tick_rate_optimization:
+    full_updates: 20_per_second
+    priority_updates: 60_per_second
+    interpolation: client_side
+
+reconciliation:
+  server_reconciliation:
+    description: "Correct client prediction errors"
+    steps:
+      - receive_authoritative_state
+      - compare_with_predicted
+      - if_mismatch_rewind
+      - replay_unacknowledged_inputs
+      - blend_to_corrected_state
+
+  smoothing:
+    position_error:
+      threshold: 0.5_units
+      blend_time: 100ms
+      method: exponential_decay
+
+    large_error:
+      threshold: 5_units
+      action: snap_immediately
+
+lag_compensation:
+  server_rewind:
+    description: "Rewind server state for hit detection"
+    max_rewind: 200ms
+    implementation: |
+      // On hit check
+      rewound_state = history.getStateAt(
+          current_time - player_latency
+      );
+      hit = checkHit(rewound_state, shot);
+
+  client_side_hit_detection:
+    description: "Client reports hits, server validates"
+    validation:
+      - check_line_of_sight
+      - check_weapon_range
+      - check_cooldowns
+      - verify_timing_plausible
+
+bandwidth_optimization:
+  per_player_budget: 50_kbps
+  techniques:
+    - delta_compression
+    - quantization
+    - interest_management
+    - priority_queue
+    - adaptive_rate

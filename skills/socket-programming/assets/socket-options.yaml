@@ -1,0 +1,118 @@
+# Socket Options for Game Servers
+# Performance tuning and configuration
+
+essential_options:
+  tcp_nodelay:
+    level: IPPROTO_TCP
+    option: TCP_NODELAY
+    value: 1
+    purpose: "Disable Nagle's algorithm for low latency"
+    impact: "Reduces latency by 20-200ms for small packets"
+    recommended: true
+
+  so_reuseaddr:
+    level: SOL_SOCKET
+    option: SO_REUSEADDR
+    value: 1
+    purpose: "Allow immediate port reuse after server restart"
+    impact: "Prevents 'Address already in use' errors"
+    recommended: true
+
+  so_keepalive:
+    level: SOL_SOCKET
+    option: SO_KEEPALIVE
+    value: 1
+    purpose: "Detect dead connections"
+    impact: "Cleans up zombie connections"
+    recommended: true
+
+buffer_options:
+  so_rcvbuf:
+    level: SOL_SOCKET
+    option: SO_RCVBUF
+    default: 8192
+    recommended: 65536
+    max: 16777216
+    purpose: "Receive buffer size"
+    notes: "Larger for high-throughput games"
+
+  so_sndbuf:
+    level: SOL_SOCKET
+    option: SO_SNDBUF
+    default: 8192
+    recommended: 65536
+    purpose: "Send buffer size"
+    notes: "Match to expected message sizes"
+
+timeout_options:
+  so_rcvtimeo:
+    level: SOL_SOCKET
+    option: SO_RCVTIMEO
+    purpose: "Receive timeout"
+    game_value: "100-500ms"
+    notes: "Prevents blocking in game loop"
+
+  so_sndtimeo:
+    level: SOL_SOCKET
+    option: SO_SNDTIMEO
+    purpose: "Send timeout"
+    game_value: "100-500ms"
+
+platform_specifics:
+  linux:
+    tcp_quickack:
+      option: TCP_QUICKACK
+      purpose: "Immediate ACK (disable delayed ACK)"
+      value: 1
+
+    tcp_cork:
+      option: TCP_CORK
+      purpose: "Buffer small packets"
+      use_case: "Batch multiple game updates"
+
+    so_busy_poll:
+      option: SO_BUSY_POLL
+      purpose: "Reduce latency with busy polling"
+      value: 50  # microseconds
+
+  windows:
+    so_exclusiveaddruse:
+      option: SO_EXCLUSIVEADDRUSE
+      purpose: "Prevent port hijacking"
+      value: 1
+
+    sio_udp_connreset:
+      ioctl: SIO_UDP_CONNRESET
+      purpose: "Prevent ICMP unreachable exceptions"
+      value: 0
+
+udp_specific:
+  ip_pmtudisc_do:
+    purpose: "Path MTU discovery"
+    value: "IP_PMTUDISC_DO"
+    notes: "Prevents fragmentation"
+
+  so_broadcast:
+    purpose: "Enable broadcast"
+    use_case: "LAN game discovery"
+    value: 1
+
+code_examples:
+  c_tcp_nodelay: |
+    int flag = 1;
+    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+               (char*)&flag, sizeof(flag));
+
+  c_nonblocking: |
+    #ifdef _WIN32
+    u_long mode = 1;
+    ioctlsocket(sockfd, FIONBIO, &mode);
+    #else
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+    #endif
+
+  go_socket_options: |
+    conn.SetNoDelay(true)
+    conn.SetKeepAlive(true)
+    conn.SetKeepAlivePeriod(30 * time.Second)

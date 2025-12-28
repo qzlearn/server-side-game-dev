@@ -1,0 +1,136 @@
+# Game Data Serialization Benchmarks
+# Performance comparison for game networking
+
+benchmark_setup:
+  message_type: player_state_update
+  fields:
+    - player_id: uint32
+    - position: float[3]
+    - rotation: float[4]
+    - velocity: float[3]
+    - health: uint16
+    - ammo: uint16
+    - flags: uint8
+
+results:
+  protobuf:
+    serialized_size: 52 bytes
+    serialize_time: 120 ns
+    deserialize_time: 150 ns
+    pros:
+      - good_balance
+      - cross_language
+      - well_documented
+    cons:
+      - requires_compilation
+      - not_zero_copy
+    recommendation: "Default choice for most games"
+
+  flatbuffers:
+    serialized_size: 56 bytes
+    serialize_time: 80 ns
+    deserialize_time: 10 ns  # Zero-copy access
+    pros:
+      - zero_copy_access
+      - fastest_read
+      - memory_efficient
+    cons:
+      - complex_api
+      - fixed_size_buffers
+    recommendation: "Real-time competitive games"
+
+  messagepack:
+    serialized_size: 48 bytes
+    serialize_time: 100 ns
+    deserialize_time: 130 ns
+    pros:
+      - schemaless
+      - smaller_than_json
+      - flexible
+    cons:
+      - no_type_safety
+      - slower_than_protobuf
+    recommendation: "Dynamic game content"
+
+  json:
+    serialized_size: 180 bytes
+    serialize_time: 500 ns
+    deserialize_time: 800 ns
+    pros:
+      - human_readable
+      - debuggable
+      - universal
+    cons:
+      - 3x_larger
+      - 4x_slower
+    recommendation: "Debug builds, lobby chat only"
+
+  custom_binary:
+    serialized_size: 39 bytes
+    serialize_time: 20 ns
+    deserialize_time: 15 ns
+    pros:
+      - smallest_size
+      - fastest_speed
+      - full_control
+    cons:
+      - maintenance_burden
+      - version_compatibility
+      - no_tooling
+    recommendation: "Ultra-competitive games only"
+
+compression_techniques:
+  delta_compression:
+    description: "Send only changes from previous state"
+    savings: "50-90%"
+    implementation: |
+      struct DeltaPlayerState {
+          uint32_t player_id;
+          uint8_t changed_fields;  // Bitmask
+          // Only include changed fields
+      };
+    use_case: "Entity updates at high tick rates"
+
+  quantization:
+    position:
+      original: "float (4 bytes)"
+      quantized: "uint16 (2 bytes)"
+      range: "[-1000, 1000] meters"
+      precision: "3cm"
+      savings: "50%"
+
+    rotation:
+      original: "quaternion float[4] (16 bytes)"
+      quantized: "smallest-three uint16[3] (6 bytes)"
+      precision: "0.01 degrees"
+      savings: "62%"
+
+    velocity:
+      original: "float[3] (12 bytes)"
+      quantized: "int8[3] (3 bytes)"
+      range: "[-12.7, 12.7] m/s"
+      precision: "0.1 m/s"
+      savings: "75%"
+
+  run_length_encoding:
+    use_case: "Tile maps, inventory arrays"
+    savings: "60-90%"
+
+  dictionary_encoding:
+    use_case: "Item names, player names"
+    method: "Replace strings with uint16 IDs"
+    savings: "80%+"
+
+bandwidth_calculations:
+  60_tick_server:
+    players: 100
+    updates_per_second: 6000  # 100 players * 60 ticks
+    json_bandwidth: "1.08 MB/s"
+    protobuf_bandwidth: "312 KB/s"
+    custom_binary_bandwidth: "234 KB/s"
+    delta_compressed: "50-100 KB/s"
+
+  recommendation:
+    small_game: "Protobuf"
+    competitive: "FlatBuffers + Delta"
+    mmo: "Custom binary + heavy compression"

@@ -1,0 +1,159 @@
+# Game Database Selection Guide
+# Choosing the right database for game servers
+
+database_types:
+  relational:
+    examples: [postgresql, mysql, mssql]
+    strengths:
+      - acid_compliance
+      - complex_queries
+      - data_integrity
+      - mature_tooling
+    weaknesses:
+      - horizontal_scaling
+      - schema_changes
+    use_cases:
+      - player_accounts
+      - transactions
+      - inventory
+      - guild_management
+    configuration:
+      connection_pool: 20-100
+      statement_cache: enabled
+      read_replicas: recommended
+
+  document:
+    examples: [mongodb, couchbase]
+    strengths:
+      - flexible_schema
+      - horizontal_scaling
+      - developer_friendly
+    weaknesses:
+      - eventual_consistency
+      - complex_transactions
+    use_cases:
+      - player_profiles
+      - game_configuration
+      - analytics
+      - content_management
+    configuration:
+      write_concern: majority
+      read_preference: nearest
+
+  key_value:
+    examples: [redis, memcached, dynamodb]
+    strengths:
+      - extremely_fast
+      - simple_model
+      - high_availability
+    weaknesses:
+      - limited_queries
+      - no_relationships
+    use_cases:
+      - session_storage
+      - leaderboards
+      - caching
+      - rate_limiting
+    configuration:
+      cluster_mode: enabled
+      persistence: aof_or_rdb
+
+  time_series:
+    examples: [influxdb, timescaledb]
+    strengths:
+      - optimized_for_metrics
+      - automatic_aggregation
+      - efficient_storage
+    use_cases:
+      - game_analytics
+      - performance_metrics
+      - player_behavior
+
+game_data_patterns:
+  player_data:
+    primary: postgresql
+    cache: redis
+    pattern: |
+      # Read
+      player = redis.get(f"player:{id}")
+      if not player:
+          player = postgres.query(id)
+          redis.setex(f"player:{id}", 300, player)
+
+      # Write
+      postgres.update(id, data)
+      redis.delete(f"player:{id}")
+
+  leaderboards:
+    database: redis
+    data_structure: sorted_set
+    pattern: |
+      # Add score
+      redis.zadd("leaderboard:weekly", {player_id: score})
+
+      # Get rank
+      rank = redis.zrevrank("leaderboard:weekly", player_id)
+
+      # Get top 100
+      top = redis.zrevrange("leaderboard:weekly", 0, 99, withscores=True)
+
+  inventory:
+    primary: postgresql
+    pattern: |
+      # Transactional updates
+      BEGIN;
+      UPDATE inventory SET quantity = quantity - 1 WHERE item_id = ?;
+      INSERT INTO player_inventory (player_id, item_id) VALUES (?, ?);
+      COMMIT;
+
+  session_data:
+    database: redis
+    ttl: 3600
+    pattern: |
+      # Session with expiry
+      redis.setex(f"session:{token}", 3600, session_data)
+
+      # Heartbeat extends
+      redis.expire(f"session:{token}", 3600)
+
+scaling_strategies:
+  read_scaling:
+    - read_replicas
+    - caching_layer
+    - query_optimization
+
+  write_scaling:
+    - sharding
+    - queue_writes
+    - batch_operations
+
+  sharding:
+    strategies:
+      - hash_based: "player_id % shard_count"
+      - range_based: "player_id ranges"
+      - geography: "region-based shards"
+
+performance_tips:
+  general:
+    - use_connection_pooling
+    - prepare_statements
+    - batch_operations
+    - async_queries
+
+  postgresql:
+    - use_indexes_wisely
+    - vacuum_regularly
+    - partition_large_tables
+    - use_jsonb_for_flexible_data
+
+  redis:
+    - use_pipelining
+    - avoid_keys_command
+    - use_scan_for_iteration
+    - set_maxmemory_policy
+
+  mongodb:
+    - create_compound_indexes
+    - use_covered_queries
+    - avoid_large_documents
+    - shard_on_hashed_key

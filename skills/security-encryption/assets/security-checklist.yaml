@@ -1,0 +1,158 @@
+# Game Server Security Checklist
+# Comprehensive security measures for multiplayer games
+
+transport_security:
+  tls_configuration:
+    - minimum_version: TLS1.3
+    - cipher_suites:
+      - TLS_AES_256_GCM_SHA384
+      - TLS_CHACHA20_POLY1305_SHA256
+    - certificate_rotation: 90_days
+    - hsts_enabled: true
+
+  udp_security:
+    - dtls_version: DTLS1.2+
+    - session_resumption: enabled
+    - replay_protection: enabled
+
+  certificate_management:
+    - valid_certificate: true
+    - cert_pinning: optional
+    - revocation_check: ocsp_stapling
+
+authentication:
+  token_security:
+    - jwt_algorithm: RS256_or_ES256
+    - token_expiry: 1_hour
+    - refresh_token: secure_httponly_cookie
+    - session_binding: ip_and_device
+
+  login_protection:
+    - rate_limit: 5_per_minute
+    - lockout_after: 10_failed_attempts
+    - lockout_duration: 30_minutes
+    - captcha_after: 3_failures
+
+  password_policy:
+    - min_length: 12
+    - require_complexity: true
+    - bcrypt_cost: 12
+    - breach_check: haveibeenpwned
+
+server_authority:
+  validation_rules:
+    movement:
+      - max_speed_check: true
+      - teleport_detection: true
+      - collision_validation: true
+      - timestamp_validation: true
+
+    combat:
+      - cooldown_enforcement: true
+      - damage_calculation_server: true
+      - hit_validation: true
+      - ammo_tracking_server: true
+
+    economy:
+      - all_transactions_server: true
+      - balance_validation: true
+      - item_ownership_check: true
+
+  never_trust_client:
+    - position_data: validate
+    - damage_dealt: recalculate
+    - item_usage: verify_ownership
+    - skill_cooldowns: server_tracked
+
+anti_cheat:
+  detection_methods:
+    statistical:
+      - aim_accuracy_tracking
+      - reaction_time_analysis
+      - movement_pattern_analysis
+      - headshot_percentage
+
+    behavioral:
+      - impossible_actions
+      - timing_anomalies
+      - physics_violations
+
+    protocol:
+      - packet_sequence_validation
+      - checksum_verification
+      - replay_detection
+
+  response_actions:
+    - log_for_review
+    - shadow_ban
+    - soft_ban_match
+    - permanent_ban
+
+rate_limiting:
+  per_action:
+    login: 5_per_minute
+    chat: 10_per_10_seconds
+    commands: 60_per_second
+    api_calls: 100_per_minute
+
+  implementation:
+    algorithm: token_bucket
+    storage: redis
+    distributed: true
+
+data_protection:
+  encryption:
+    at_rest:
+      - player_data: aes_256
+      - payment_info: aes_256_gcm
+      - passwords: bcrypt
+
+    in_transit:
+      - all_traffic: tls_1_3
+      - sensitive_game_data: aes_gcm
+
+  pii_handling:
+    - minimize_collection
+    - encrypt_storage
+    - audit_access
+    - deletion_capability
+
+input_validation:
+  string_inputs:
+    - max_length_check
+    - character_whitelist
+    - sql_injection_prevention
+    - xss_prevention
+
+  numeric_inputs:
+    - range_validation
+    - type_checking
+    - overflow_prevention
+
+logging_and_monitoring:
+  security_events:
+    - failed_logins
+    - suspicious_activity
+    - admin_actions
+    - data_access
+
+  alerting:
+    - brute_force_attempts
+    - unusual_patterns
+    - server_anomalies
+
+incident_response:
+  preparation:
+    - documented_procedures
+    - contact_list
+    - backup_strategy
+
+  detection:
+    - automated_alerts
+    - log_analysis
+    - player_reports
+
+  response:
+    - isolation_capability
+    - rollback_procedures
+    - communication_plan

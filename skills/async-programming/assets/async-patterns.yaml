@@ -1,0 +1,194 @@
+# Async Programming Patterns for Games
+# Concurrency patterns across languages
+
+models:
+  async_await:
+    languages: [csharp, javascript, python, rust]
+    description: "Cooperative multitasking with syntactic sugar"
+    benefits:
+      - readable_code
+      - low_overhead
+      - easy_error_handling
+    drawbacks:
+      - colored_functions
+      - viral_async
+
+  goroutines:
+    languages: [go]
+    description: "Lightweight green threads"
+    benefits:
+      - extremely_lightweight
+      - simple_model
+      - builtin_scheduler
+    drawbacks:
+      - stack_growth_overhead
+      - gc_overhead
+
+  coroutines:
+    languages: [cpp20, kotlin, lua]
+    description: "Stackless suspendable functions"
+    benefits:
+      - zero_overhead
+      - fine_control
+    drawbacks:
+      - complex_implementation
+      - limited_tooling
+
+  reactive:
+    languages: [all]
+    description: "Event stream processing"
+    frameworks:
+      - rxjs: javascript
+      - rxjava: java
+      - reactor: java
+      - rxnet: csharp
+    benefits:
+      - composable_operators
+      - backpressure
+    drawbacks:
+      - steep_learning_curve
+
+patterns:
+  fire_and_forget:
+    description: "Launch task without waiting"
+    use_case: "Logging, analytics"
+    csharp: |
+      _ = SendAnalyticsAsync(event);  // Don't await
+    go: |
+      go sendAnalytics(event)  // Goroutine
+    caution: "Error handling is lost"
+
+  parallel_tasks:
+    description: "Run multiple tasks concurrently"
+    use_case: "Parallel data loading"
+    csharp: |
+      var tasks = new[] {
+          LoadPlayerAsync(id1),
+          LoadPlayerAsync(id2),
+          LoadPlayerAsync(id3)
+      };
+      var results = await Task.WhenAll(tasks);
+    go: |
+      var wg sync.WaitGroup
+      results := make(chan Player, 3)
+      for _, id := range ids {
+          wg.Add(1)
+          go func(id string) {
+              defer wg.Done()
+              results <- loadPlayer(id)
+          }(id)
+      }
+      wg.Wait()
+
+  producer_consumer:
+    description: "Async queue processing"
+    use_case: "Message processing, task queues"
+    csharp: |
+      var channel = Channel.CreateBounded<Message>(1000);
+
+      // Producer
+      await channel.Writer.WriteAsync(msg);
+
+      // Consumer
+      await foreach (var msg in channel.Reader.ReadAllAsync()) {
+          await ProcessAsync(msg);
+      }
+    go: |
+      messages := make(chan Message, 1000)
+
+      // Producer
+      messages <- msg
+
+      // Consumer
+      for msg := range messages {
+          process(msg)
+      }
+
+  timeout_cancellation:
+    description: "Cancel operations after timeout"
+    use_case: "Network calls, slow operations"
+    csharp: |
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      try {
+          await LongOperationAsync(cts.Token);
+      } catch (OperationCanceledException) {
+          // Handle timeout
+      }
+    go: |
+      ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+      defer cancel()
+
+      select {
+      case result := <-doWork(ctx):
+          // Success
+      case <-ctx.Done():
+          // Timeout
+      }
+
+  rate_limiting:
+    description: "Control operation rate"
+    use_case: "API calls, resource protection"
+    go: |
+      limiter := rate.NewLimiter(rate.Every(time.Millisecond*10), 100)
+      for _, req := range requests {
+          limiter.Wait(ctx)
+          go process(req)
+      }
+
+game_specific:
+  game_loop_integration:
+    description: "Async within fixed timestep loop"
+    pattern: |
+      while (running) {
+          // 1. Poll async completions (non-blocking)
+          processCompletedTasks();
+
+          // 2. Fixed timestep game update
+          gameUpdate(fixedDeltaTime);
+
+          // 3. Render (variable)
+          render();
+
+          // 4. Frame timing
+          waitForNextFrame();
+      }
+
+  async_database:
+    description: "Non-blocking database operations"
+    pattern: |
+      // Don't block game loop for DB
+      var saveTask = player.SaveAsync();
+
+      // Continue game logic
+      gameUpdate();
+
+      // Check if save completed
+      if (saveTask.IsCompleted) {
+          handleSaveResult(saveTask.Result);
+      }
+
+  network_async:
+    description: "Async network with game loop"
+    pattern: |
+      // Receive loop (separate thread/task)
+      async Task ReceiveLoop() {
+          while (connected) {
+              var msg = await socket.ReceiveAsync();
+              inputQueue.Enqueue(msg);  // Thread-safe queue
+          }
+      }
+
+      // Game loop processes queue
+      void GameUpdate() {
+          while (inputQueue.TryDequeue(out var msg)) {
+              processInput(msg);
+          }
+      }
+
+best_practices:
+  - "Never block on async in game loop"
+  - "Use timeouts for all network operations"
+  - "Implement cancellation for cleanup"
+  - "Limit concurrent operations with semaphores"
+  - "Use value tasks (C#) for hot paths"
+  - "Avoid allocations in async hot paths"

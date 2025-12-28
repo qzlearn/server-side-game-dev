@@ -1,0 +1,165 @@
+# Message Queue Patterns for Games
+# Asynchronous messaging architectures
+
+queue_systems:
+  kafka:
+    strengths:
+      - massive_throughput
+      - persistent_log
+      - replay_capability
+      - exactly_once_semantics
+    weaknesses:
+      - higher_latency
+      - complex_setup
+    use_cases:
+      - game_analytics
+      - event_sourcing
+      - match_history
+      - audit_logs
+    configuration:
+      partitions: 12
+      replication: 3
+      retention: 7d
+
+  rabbitmq:
+    strengths:
+      - low_latency
+      - flexible_routing
+      - easy_setup
+      - multiple_protocols
+    weaknesses:
+      - lower_throughput
+      - no_log_replay
+    use_cases:
+      - match_events
+      - player_notifications
+      - cross_server_chat
+      - async_tasks
+    configuration:
+      exchange_type: topic
+      durable: true
+      prefetch: 10
+
+  redis_pubsub:
+    strengths:
+      - ultra_low_latency
+      - simple_api
+      - high_throughput
+    weaknesses:
+      - no_persistence
+      - no_delivery_guarantee
+    use_cases:
+      - real_time_state
+      - live_scoreboards
+      - presence_updates
+      - game_broadcasts
+
+  nats:
+    strengths:
+      - extremely_low_latency
+      - lightweight
+      - cloud_native
+    weaknesses:
+      - limited_persistence
+    use_cases:
+      - game_state_sync
+      - microservice_events
+      - discovery
+
+patterns:
+  pub_sub:
+    description: "One-to-many broadcasting"
+    game_use: "State updates to all players"
+    example: |
+      # Server publishes
+      redis.publish("game:123", state_json)
+
+      # All clients subscribe
+      for msg in redis.subscribe("game:123"):
+          update_local_state(msg)
+
+  work_queue:
+    description: "Distribute tasks among workers"
+    game_use: "Match processing, replay analysis"
+    example: |
+      # Producer
+      channel.basic_publish(
+          exchange='',
+          routing_key='match_results',
+          body=json.dumps(match_data)
+      )
+
+      # Multiple consumers process
+      channel.basic_consume(
+          queue='match_results',
+          on_message_callback=process_match
+      )
+
+  request_reply:
+    description: "RPC-style communication"
+    game_use: "Matchmaking requests"
+    example: |
+      # Send request with reply queue
+      correlation_id = uuid4()
+      channel.basic_publish(
+          routing_key='matchmaking',
+          properties=pika.BasicProperties(
+              reply_to=callback_queue,
+              correlation_id=correlation_id
+          ),
+          body=request
+      )
+
+  fan_out:
+    description: "Broadcast to multiple queues"
+    game_use: "Global announcements"
+    configuration:
+      exchange_type: fanout
+
+  topic_routing:
+    description: "Route by topic pattern"
+    game_use: "Regional chat, game mode events"
+    patterns:
+      - "game.123.*"  # All events for game 123
+      - "*.kill.*"    # All kill events
+      - "eu.ranked.#" # EU ranked games
+
+actor_model:
+  orleans:
+    description: "Virtual actors for game entities"
+    grains:
+      - PlayerGrain: "Per-player state"
+      - GameGrain: "Match state"
+      - GuildGrain: "Guild management"
+    benefits:
+      - automatic_distribution
+      - fault_tolerance
+      - transparent_scaling
+
+  akka:
+    description: "Actor system for high concurrency"
+    actors:
+      - PlayerActor
+      - RoomActor
+      - MatchmakerActor
+    supervision: "Parent-child hierarchy"
+
+game_architecture:
+  event_driven:
+    flow: |
+      Player Action → Game Server → Event Queue →
+      Analytics Service, Leaderboard Service, Achievement Service
+
+    benefits:
+      - decoupled_services
+      - scalability
+      - fault_isolation
+
+  cqrs:
+    description: "Command Query Responsibility Segregation"
+    command_side:
+      - receives_player_actions
+      - writes_to_event_store
+    query_side:
+      - reads_from_projections
+      - serves_state_queries

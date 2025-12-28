@@ -1,0 +1,159 @@
+# Game Loop Tick Patterns
+# Server-side game loop architectures
+
+tick_models:
+  fixed_timestep:
+    description: "Consistent simulation rate"
+    tick_rate: 20-128_hz
+    typical: 60_hz_or_20_hz
+    benefits:
+      - deterministic
+      - reproducible
+      - network_friendly
+    implementation: |
+      const TICK_RATE = 60;
+      const TICK_DURATION = 1000 / TICK_RATE; // 16.67ms
+
+      let lastTick = Date.now();
+      let accumulator = 0;
+
+      function loop() {
+          const now = Date.now();
+          accumulator += now - lastTick;
+          lastTick = now;
+
+          while (accumulator >= TICK_DURATION) {
+              gameTick(TICK_DURATION / 1000);
+              accumulator -= TICK_DURATION;
+          }
+
+          setImmediate(loop);
+      }
+
+  variable_timestep:
+    description: "Tick as fast as possible"
+    use_case: "Non-physics games"
+    drawback: "Non-deterministic"
+    implementation: |
+      let lastTime = performance.now();
+
+      function loop() {
+          const now = performance.now();
+          const dt = (now - lastTime) / 1000;
+          lastTime = now;
+
+          update(dt);
+          setImmediate(loop);
+      }
+
+  semi_fixed:
+    description: "Fixed physics, variable rendering"
+    implementation: |
+      while (running) {
+          processInput();
+
+          // Fixed timestep physics
+          while (accumulator >= PHYSICS_DT) {
+              physicsStep(PHYSICS_DT);
+              accumulator -= PHYSICS_DT;
+          }
+
+          // Variable rate for other updates
+          updateAI(dt);
+          sendNetworkUpdates();
+      }
+
+tick_components:
+  input_processing:
+    order: 1
+    description: "Process all queued player inputs"
+    pattern: |
+      while (inputQueue.hasMessages()) {
+          const input = inputQueue.dequeue();
+          validateAndApply(input);
+      }
+
+  physics_simulation:
+    order: 2
+    description: "Update physics world"
+    fixed_dt: true
+    substeps: optional
+
+  game_logic:
+    order: 3
+    description: "Update game rules, abilities, etc."
+    components:
+      - cooldowns
+      - buffs_debuffs
+      - objectives
+      - spawning
+
+  ai_update:
+    order: 4
+    description: "Update AI entities"
+    optimization: "Stagger AI across ticks"
+
+  state_broadcast:
+    order: 5
+    description: "Send state to clients"
+    frequency: "Every N ticks or adaptive"
+
+performance_budgets:
+  60hz_server:
+    total_budget: 16.67ms
+    breakdown:
+      input_processing: 1ms
+      physics: 5ms
+      game_logic: 5ms
+      ai: 3ms
+      networking: 2ms
+      overhead: 0.67ms
+
+  20hz_server:
+    total_budget: 50ms
+    breakdown:
+      input_processing: 2ms
+      physics: 15ms
+      game_logic: 15ms
+      ai: 10ms
+      networking: 5ms
+      overhead: 3ms
+
+optimization_techniques:
+  ai_staggering:
+    description: "Don't update all AI every tick"
+    pattern: |
+      for (int i = currentTick % AI_UPDATE_DIVISOR;
+           i < entities.length;
+           i += AI_UPDATE_DIVISOR) {
+          entities[i].updateAI();
+      }
+
+  spatial_partitioning:
+    description: "Reduce collision check complexity"
+    methods:
+      - grid
+      - quadtree
+      - octree
+      - bvh
+
+  sleep_management:
+    description: "Yield CPU when possible"
+    pattern: |
+      const tickEnd = tickStart + TICK_DURATION;
+      const now = Date.now();
+      if (now < tickEnd) {
+          sleep(tickEnd - now - 1); // Wake slightly early
+      }
+
+monitoring:
+  metrics:
+    - tick_duration_ms
+    - tick_overrun_count
+    - input_queue_size
+    - entity_count
+    - network_bytes_sent
+
+  alerts:
+    tick_overrun: ">5% of ticks exceed budget"
+    queue_backup: "Input queue > 100 messages"

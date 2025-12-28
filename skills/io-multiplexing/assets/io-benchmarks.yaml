@@ -1,0 +1,132 @@
+# I/O Multiplexing Benchmarks
+# Performance comparison for game servers
+
+system_comparison:
+  select:
+    max_connections: 1024  # FD_SETSIZE limit
+    complexity: "O(n) per call"
+    latency: "Higher"
+    platforms: all
+    recommendation: "Avoid for game servers"
+
+  poll:
+    max_connections: 10000
+    complexity: "O(n) per call"
+    latency: "Medium"
+    platforms: unix
+    recommendation: "Legacy systems only"
+
+  epoll:
+    max_connections: 1000000+
+    complexity: "O(1) per event"
+    latency: "10-50 μs"
+    platforms: linux
+    modes:
+      level_triggered: "Default, safer"
+      edge_triggered: "Higher performance"
+    recommendation: "Linux game servers"
+
+  kqueue:
+    max_connections: 1000000+
+    complexity: "O(1) per event"
+    latency: "10-50 μs"
+    platforms: [bsd, macos]
+    recommendation: "macOS/BSD game servers"
+
+  iocp:
+    max_connections: 1000000+
+    complexity: "O(1) per completion"
+    latency: "10-50 μs"
+    platforms: windows
+    model: proactor
+    recommendation: "Windows game servers"
+
+  io_uring:
+    max_connections: 1000000+
+    complexity: "O(1)"
+    latency: "5-20 μs"
+    platforms: "Linux 5.1+"
+    features:
+      - zero_copy
+      - kernel_polling
+      - submission_queuing
+    recommendation: "Modern Linux, highest performance"
+
+benchmarks:
+  echo_server_10k_connections:
+    epoll:
+      throughput: "500K msg/sec"
+      latency_p99: "45 μs"
+      cpu_usage: "35%"
+
+    io_uring:
+      throughput: "800K msg/sec"
+      latency_p99: "25 μs"
+      cpu_usage: "25%"
+
+    iocp:
+      throughput: "450K msg/sec"
+      latency_p99: "50 μs"
+      cpu_usage: "40%"
+
+  game_state_broadcast:
+    scenario: "60 tick/sec, 1000 players, 100 bytes/player"
+    epoll:
+      updates_per_sec: 60000
+      bandwidth: "6 MB/s"
+      latency: "1-2 ms"
+
+    io_uring:
+      updates_per_sec: 60000
+      bandwidth: "6 MB/s"
+      latency: "0.5-1 ms"
+
+configuration_tuning:
+  linux_kernel:
+    - "net.core.somaxconn = 65535"
+    - "net.core.netdev_max_backlog = 65535"
+    - "net.ipv4.tcp_max_syn_backlog = 65535"
+    - "net.core.rmem_max = 16777216"
+    - "net.core.wmem_max = 16777216"
+    - "fs.file-max = 1000000"
+
+  process_limits:
+    - "ulimit -n 1000000  # Max open files"
+    - "ulimit -s unlimited  # Stack size"
+
+  epoll_specific:
+    - "EPOLL_CLOEXEC for fork safety"
+    - "EPOLLET for edge-triggered mode"
+    - "EPOLLONESHOT for thread-safe handling"
+
+  io_uring_specific:
+    - "IORING_SETUP_SQPOLL for kernel polling"
+    - "IORING_SETUP_IOPOLL for busy polling"
+    - "Queue depth: 256-4096"
+
+patterns:
+  single_thread_reactor:
+    description: "One thread handles all I/O"
+    use_case: "Small games <1000 players"
+    implementation: |
+      while (running) {
+          epoll_wait(...);
+          for each ready socket:
+              handle_io(socket);
+          game_tick();
+      }
+
+  thread_per_core:
+    description: "Each core runs reactor"
+    use_case: "Medium games 1K-10K players"
+    implementation: |
+      // Distribute connections via SO_REUSEPORT
+      // Each thread has own epoll instance
+
+  hybrid:
+    description: "I/O threads + game thread pool"
+    use_case: "Large games 10K+ players"
+    implementation: |
+      // I/O threads: receive and queue
+      // Game threads: process game logic
+      // I/O threads: send responses

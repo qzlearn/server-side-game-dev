@@ -1,0 +1,177 @@
+# Game Server Threading Patterns
+# Concurrency architecture for multiplayer games
+
+threading_models:
+  single_threaded:
+    description: "All game logic on one thread"
+    pros:
+      - simple_debugging
+      - no_race_conditions
+      - deterministic
+    cons:
+      - limited_scalability
+      - io_blocks_game_loop
+    use_case: "Turn-based, casual games <100 players"
+    example: |
+      while (running) {
+          processNetwork();  // Non-blocking
+          updateGameState();
+          sendUpdates();
+          sleep(16ms);  // 60 FPS
+      }
+
+  thread_per_connection:
+    description: "Dedicated thread per player"
+    pros:
+      - simple_programming_model
+      - natural_isolation
+    cons:
+      - high_memory_overhead
+      - context_switch_cost
+      - limited_to_1000_threads
+    use_case: "Small lobbies, social games"
+
+  thread_pool:
+    description: "Fixed pool processes tasks"
+    pros:
+      - efficient_resource_use
+      - good_scalability
+      - controlled_overhead
+    cons:
+      - complex_task_scheduling
+      - potential_starvation
+    configuration:
+      io_threads: "2 * CPU cores"
+      game_threads: "CPU cores"
+      queue_size: 10000
+    use_case: "Most multiplayer games"
+
+  actor_model:
+    description: "Message-passing concurrency"
+    pros:
+      - no_shared_state
+      - natural_distribution
+      - fault_isolation
+    cons:
+      - learning_curve
+      - message_serialization
+    frameworks:
+      - akka_java
+      - akka_net_csharp
+      - orleans_csharp
+      - erlang_otp
+    use_case: "MMOs, distributed systems"
+
+synchronization_primitives:
+  mutex:
+    overhead: "50-100 ns"
+    when_to_use: "Complex critical sections"
+    pattern: |
+      std::lock_guard<std::mutex> lock(mtx);
+      // Critical section
+
+  spinlock:
+    overhead: "10-20 ns (uncontended)"
+    when_to_use: "Very short critical sections (<100 cycles)"
+    caution: "Burns CPU when contended"
+    pattern: |
+      while (lock.test_and_set()) {}
+      // Critical section
+      lock.clear();
+
+  rwlock:
+    overhead: "100-200 ns"
+    when_to_use: "Read-heavy workloads (>90% reads)"
+    pattern: |
+      std::shared_lock read(rwmtx);  // Many readers
+      std::unique_lock write(rwmtx); // One writer
+
+  semaphore:
+    when_to_use: "Resource pools, rate limiting"
+    pattern: "Counting semaphore for connection limits"
+
+  condition_variable:
+    when_to_use: "Producer-consumer patterns"
+    pattern: "Thread pool task notification"
+
+lock_free_patterns:
+  atomic_operations:
+    use_case: "Simple counters, flags"
+    operations:
+      - load
+      - store
+      - exchange
+      - compare_exchange_strong
+      - fetch_add
+
+  spsc_queue:
+    description: "Single-producer single-consumer"
+    use_case: "Per-player message queues"
+    throughput: "10M+ ops/sec"
+
+  mpsc_queue:
+    description: "Multi-producer single-consumer"
+    use_case: "Game state update aggregation"
+    implementations:
+      - crossbeam_rust
+      - concurrentqueue_cpp
+
+game_server_architecture:
+  recommended:
+    main_thread:
+      - game_tick_loop
+      - state_updates
+      - ai_scheduling
+
+    io_thread_pool:
+      - socket_read_write
+      - database_queries
+      - external_apis
+
+    worker_pool:
+      - physics_simulation
+      - ai_pathfinding
+      - world_generation
+
+  tick_synchronization:
+    pattern: |
+      // Main thread runs ticks
+      while (running) {
+          tick_start = now();
+
+          // Gather IO results (lock-free queue)
+          process_input_queue();
+
+          // Update game state
+          game_tick();
+
+          // Queue outputs (lock-free)
+          queue_outputs();
+
+          // Wait for next tick
+          sleep_until(tick_start + 16ms);
+      }
+
+common_bugs:
+  deadlock:
+    cause: "Lock ordering violation"
+    prevention: "Always acquire locks in same order"
+    detection: "Lock hierarchy, timeout"
+
+  race_condition:
+    cause: "Unsynchronized shared access"
+    prevention: "Mutex or atomic operations"
+    detection: "ThreadSanitizer"
+
+  priority_inversion:
+    cause: "Low-priority thread holds lock"
+    prevention: "Priority inheritance mutex"
+
+  false_sharing:
+    cause: "Different threads access same cache line"
+    prevention: "alignas(64) padding"
+    example: |
+      struct alignas(64) PlayerCounter {
+          std::atomic<int> count;
+          char padding[60];
+      };

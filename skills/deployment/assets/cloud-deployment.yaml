@@ -1,0 +1,158 @@
+# Game Server Cloud Deployment
+# Infrastructure patterns for multiplayer games
+
+cloud_providers:
+  aws:
+    game_services:
+      - gamelift: "Managed dedicated servers"
+      - ec2: "Custom server hosting"
+      - eks: "Kubernetes clusters"
+
+    supporting:
+      - elasticache: "Redis/Memcached"
+      - rds: "Managed databases"
+      - dynamodb: "NoSQL"
+      - cloudfront: "CDN"
+
+  azure:
+    game_services:
+      - playfab: "Backend as a Service"
+      - aks: "Kubernetes"
+      - game_stack: "Reference architecture"
+
+    supporting:
+      - cosmos_db: "Global database"
+      - redis_cache: "Caching"
+
+  gcp:
+    game_services:
+      - agones: "Kubernetes game servers"
+      - gke: "Kubernetes"
+      - cloud_spanner: "Global database"
+
+deployment_patterns:
+  dedicated_servers:
+    description: "One process per match"
+    scaling: "Scale based on match demand"
+    orchestration:
+      - agones: "Kubernetes native"
+      - gamelift: "AWS managed"
+      - custom: "Fleet management"
+
+  containerized:
+    dockerfile: |
+      FROM ubuntu:22.04
+
+      # Install dependencies
+      RUN apt-get update && apt-get install -y \
+          libssl-dev
+
+      # Copy game server
+      COPY build/server /app/server
+      COPY config/ /app/config/
+
+      WORKDIR /app
+      EXPOSE 7777/udp 7778/tcp
+
+      CMD ["./server", "--config", "/app/config/production.yaml"]
+
+    kubernetes: |
+      apiVersion: agones.dev/v1
+      kind: GameServer
+      spec:
+        ports:
+          - name: game
+            portPolicy: Dynamic
+            containerPort: 7777
+            protocol: UDP
+        template:
+          spec:
+            containers:
+              - name: game-server
+                image: game-server:latest
+                resources:
+                  requests:
+                    memory: "512Mi"
+                    cpu: "500m"
+                  limits:
+                    memory: "1Gi"
+                    cpu: "1000m"
+
+  serverless:
+    use_cases:
+      - matchmaking_api
+      - leaderboard_api
+      - analytics_ingest
+    not_for: "Real-time gameplay"
+
+scaling_strategies:
+  horizontal:
+    metric: concurrent_players_per_server
+    target: 100_players
+    min_servers: 2
+    max_servers: 100
+
+  predictive:
+    description: "Pre-scale based on patterns"
+    triggers:
+      - time_of_day
+      - day_of_week
+      - events
+
+  regional:
+    regions:
+      - us_east
+      - us_west
+      - eu_west
+      - asia_pacific
+    routing: latency_based
+
+infrastructure_as_code:
+  terraform: |
+    resource "aws_gamelift_fleet" "game" {
+      name          = "production-fleet"
+      build_id      = aws_gamelift_build.game.id
+      ec2_instance_type = "c5.large"
+
+      runtime_configuration {
+        server_process {
+          concurrent_executions = 1
+          launch_path           = "/local/game/server"
+          parameters            = "--config production"
+        }
+      }
+
+      ec2_inbound_permission {
+        from_port = 7777
+        to_port   = 7777
+        ip_range  = "0.0.0.0/0"
+        protocol  = "UDP"
+      }
+    }
+
+ci_cd:
+  pipeline:
+    - build: "Compile server binary"
+    - test: "Run unit/integration tests"
+    - package: "Build container image"
+    - deploy_staging: "Deploy to staging"
+    - smoke_test: "Automated game tests"
+    - deploy_production: "Rolling update"
+
+  rollback:
+    automatic: true
+    triggers:
+      - error_rate_spike
+      - latency_spike
+      - health_check_failure
+
+monitoring:
+  infrastructure:
+    - server_health
+    - auto_scaling_events
+    - cost_tracking
+
+  game:
+    - player_counts
+    - match_metrics
+    - error_rates

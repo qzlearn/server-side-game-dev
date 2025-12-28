@@ -1,0 +1,184 @@
+# Game Server Design Patterns Catalog
+# Proven patterns for multiplayer game backends
+
+architectural_patterns:
+  ecs:
+    name: "Entity Component System"
+    category: architectural
+    problem: "Complex entity inheritance hierarchies"
+    solution: "Compose entities from data components, process with systems"
+    benefits:
+      - cache_friendly_data_layout
+      - easy_entity_composition
+      - parallel_processing
+      - decoupled_logic
+    implementation: |
+      // Entity = just an ID
+      using Entity = uint32_t;
+
+      // Components = pure data in arrays
+      std::vector<Position> positions;
+      std::vector<Velocity> velocities;
+
+      // System = logic that processes components
+      void movementSystem(float dt) {
+          for (size_t i = 0; i < entities.size(); i++) {
+              positions[i].x += velocities[i].dx * dt;
+          }
+      }
+    frameworks:
+      - entt_cpp
+      - flecs
+      - legion_rust
+      - unity_dots
+
+  microservices:
+    name: "Microservices Architecture"
+    category: architectural
+    problem: "Monolithic server doesn't scale"
+    solution: "Split into specialized services"
+    services:
+      - auth_service: "Login, tokens"
+      - matchmaking_service: "Queue, matching"
+      - game_server: "Core gameplay"
+      - chat_service: "Social features"
+      - analytics_service: "Telemetry"
+    communication: "gRPC, message queues"
+
+behavioral_patterns:
+  command:
+    name: "Command Pattern"
+    problem: "Need to replay, undo, or network player actions"
+    solution: "Encapsulate actions as objects"
+    use_cases:
+      - input_replay
+      - undo_redo
+      - network_sync
+      - cheat_detection
+    implementation: |
+      struct Command {
+          uint64_t tick;
+          virtual void execute(GameState&) = 0;
+          virtual void undo(GameState&) = 0;
+      };
+
+  observer:
+    name: "Observer/Event Pattern"
+    problem: "Many systems need to react to game events"
+    solution: "Publish-subscribe for loose coupling"
+    use_cases:
+      - achievements
+      - analytics
+      - ui_updates
+      - sound_effects
+    implementation: |
+      eventBus.subscribe<PlayerDied>([](auto& event) {
+          analytics.record("death", event.playerId);
+          achievements.check(event);
+      });
+
+  state_machine:
+    name: "State Machine"
+    problem: "Complex state transitions"
+    solution: "Formalize states and transitions"
+    use_cases:
+      - player_states
+      - game_phases
+      - ai_behavior
+      - connection_states
+    states_example:
+      - lobby
+      - loading
+      - playing
+      - paused
+      - game_over
+
+creational_patterns:
+  object_pool:
+    name: "Object Pool"
+    problem: "Frequent allocation/deallocation causes GC pauses"
+    solution: "Pre-allocate and reuse objects"
+    use_cases:
+      - projectiles
+      - particles
+      - network_packets
+      - entity_instances
+    implementation: |
+      template<typename T>
+      class Pool {
+          std::vector<T> objects;
+          std::queue<T*> available;
+      public:
+          T* acquire() {
+              if (available.empty()) return nullptr;
+              auto* obj = available.front();
+              available.pop();
+              return obj;
+          }
+      };
+
+  factory:
+    name: "Factory Pattern"
+    problem: "Complex entity creation"
+    solution: "Centralize creation logic"
+    use_cases:
+      - spawning_entities
+      - creating_projectiles
+      - item_generation
+
+structural_patterns:
+  flyweight:
+    name: "Flyweight"
+    problem: "Many similar objects waste memory"
+    solution: "Share common data"
+    use_cases:
+      - item_definitions
+      - map_tiles
+      - particle_types
+    example: "1000 swords share one SwordDefinition"
+
+  proxy:
+    name: "Proxy/Stub"
+    problem: "Remote procedure calls need local interface"
+    solution: "Local object represents remote"
+    use_cases:
+      - rpc_stubs
+      - lazy_loading
+      - access_control
+
+game_specific_patterns:
+  event_sourcing:
+    name: "Event Sourcing"
+    problem: "Need audit trail and replay capability"
+    solution: "Store events, derive state"
+    benefits:
+      - full_audit_trail
+      - replay_capability
+      - debug_reproduction
+      - temporal_queries
+
+  snapshot_interpolation:
+    name: "Snapshot Interpolation"
+    problem: "Smooth rendering despite network jitter"
+    solution: "Buffer snapshots, interpolate between them"
+    buffer_size: "3-5 snapshots"
+    delay: "100-150ms"
+
+  client_side_prediction:
+    name: "Client-Side Prediction"
+    problem: "Input feels laggy"
+    solution: "Predict locally, reconcile with server"
+    components:
+      - local_simulation
+      - server_authoritative_state
+      - reconciliation_logic
+
+  interest_management:
+    name: "Interest Management"
+    problem: "Can't send all data to all players"
+    solution: "Only send relevant data"
+    techniques:
+      - distance_based
+      - visibility_culling
+      - priority_based
+      - subscription_based

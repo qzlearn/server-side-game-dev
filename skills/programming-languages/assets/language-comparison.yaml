@@ -1,0 +1,172 @@
+# Game Server Programming Languages Comparison
+# Selection guide for server-side game development
+
+languages:
+  cpp:
+    name: "C++"
+    strengths:
+      - maximum_performance
+      - fine_grained_memory_control
+      - zero_cost_abstractions
+      - direct_hardware_access
+    weaknesses:
+      - complex_memory_management
+      - longer_development_time
+      - steep_learning_curve
+    best_for:
+      - aaa_game_servers
+      - fps_competitive_games
+      - mmo_core_systems
+      - real_time_simulation
+    frameworks:
+      - boost_asio
+      - libuv
+      - enet
+    gc: none
+    concurrency: threads_with_mutex
+
+  csharp:
+    name: "C#"
+    strengths:
+      - unity_integration
+      - async_await_support
+      - rich_ecosystem
+      - rapid_development
+    weaknesses:
+      - gc_pauses
+      - higher_memory_usage
+    best_for:
+      - unity_game_backends
+      - mobile_game_servers
+      - casual_games
+    frameworks:
+      - aspnet_core
+      - lidgren
+      - mirror_networking
+    gc: generational
+    concurrency: task_parallel_library
+
+  go:
+    name: "Go"
+    strengths:
+      - goroutines
+      - simple_concurrency
+      - fast_compilation
+      - built_in_networking
+    weaknesses:
+      - gc_pauses
+      - no_generics_until_1_18
+    best_for:
+      - matchmaking_services
+      - microservices
+      - api_gateways
+      - chat_systems
+    frameworks:
+      - gorilla_websocket
+      - gnet
+      - leaf
+    gc: concurrent_mark_sweep
+    concurrency: goroutines_channels
+
+  java:
+    name: "Java"
+    strengths:
+      - mature_ecosystem
+      - cross_platform
+      - excellent_tooling
+      - enterprise_support
+    weaknesses:
+      - gc_pauses
+      - verbose_syntax
+      - higher_latency
+    best_for:
+      - mmo_backends
+      - android_game_servers
+      - enterprise_games
+    frameworks:
+      - netty
+      - vert_x
+      - smartfox
+    gc: g1_zgc
+    concurrency: virtual_threads_java21
+
+  erlang_elixir:
+    name: "Erlang/Elixir"
+    strengths:
+      - fault_tolerance
+      - hot_code_reload
+      - distributed_by_design
+      - soft_real_time
+    weaknesses:
+      - unfamiliar_syntax
+      - smaller_talent_pool
+    best_for:
+      - chat_systems
+      - presence_services
+      - distributed_game_state
+    frameworks:
+      - otp
+      - phoenix
+    gc: per_process
+    concurrency: actor_model
+
+  rust:
+    name: "Rust"
+    strengths:
+      - memory_safety
+      - c_level_performance
+      - modern_tooling
+      - fearless_concurrency
+    weaknesses:
+      - steep_learning_curve
+      - longer_compile_times
+      - smaller_game_ecosystem
+    best_for:
+      - security_critical_servers
+      - high_performance_new_projects
+      - systems_programming
+    frameworks:
+      - tokio
+      - actix
+      - bevy_replicon
+    gc: none_ownership_model
+    concurrency: async_await_channels
+
+selection_criteria:
+  performance_critical:
+    primary: cpp
+    secondary: rust
+    notes: "Sub-millisecond latency requirements"
+
+  rapid_development:
+    primary: go
+    secondary: csharp
+    notes: "Time to market is priority"
+
+  unity_backend:
+    primary: csharp
+    secondary: go
+    notes: "Seamless Unity integration"
+
+  distributed_systems:
+    primary: erlang
+    secondary: go
+    notes: "Fault tolerance and distribution"
+
+  team_expertise:
+    recommendation: "Match existing team skills"
+    notes: "Developer productivity often outweighs language performance"
+
+performance_benchmarks:
+  echo_server_latency:
+    cpp: "10-50 μs"
+    rust: "15-60 μs"
+    go: "50-200 μs"
+    java: "100-500 μs"
+    csharp: "80-400 μs"
+
+  connections_per_server:
+    cpp: "100K-1M"
+    go: "50K-500K"
+    java: "20K-100K"
+    csharp: "20K-100K"

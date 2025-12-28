@@ -1,7 +1,7 @@
 {
   "name": "server-side-game-dev-plugin",
-  "version": "2.0.0",
-  "description": "Server-side game development plugin with 7 specialized agents for multiplayer game backends, networking, matchmaking, and real-time state synchronization",
+  "version": "3.0.0",
+  "description": "Comprehensive server-side game development plugin aligned with roadmap.sh/server-side-game-developer - 17 skills covering networking, concurrency, databases, and cloud deployment",
   "author": {
     "name": "Dr. Umit Kacar & Muhsin Elcicek",
     "email": "kacarumit.phd@gmail.com"
@@ -14,7 +14,11 @@
     "matchmaking",
     "real-time",
     "websocket",
-    "state-sync"
+    "state-sync",
+    "epoll",
+    "grpc",
+    "protobuf",
+    "concurrency"
   ],
   "repository": {
     "url": "https://github.com/pluginagentmarketplace/custom-plugin-server-side-game-dev"
@@ -41,7 +45,17 @@
     "./skills/game-loop/SKILL.md",
     "./skills/databases/SKILL.md",
     "./skills/deployment/SKILL.md",
-    "./skills/monitoring/SKILL.md"
+    "./skills/monitoring/SKILL.md",
+    "./skills/programming-languages/SKILL.md",
+    "./skills/socket-programming/SKILL.md",
+    "./skills/data-serialization/SKILL.md",
+    "./skills/multithreading/SKILL.md",
+    "./skills/design-patterns/SKILL.md",
+    "./skills/security-encryption/SKILL.md",
+    "./skills/communication-protocols/SKILL.md",
+    "./skills/message-queues/SKILL.md",
+    "./skills/io-multiplexing/SKILL.md",
+    "./skills/async-programming/SKILL.md"
   ],
   "hooks": "./hooks/hooks.json"
 }
