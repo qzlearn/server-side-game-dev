@@ -1,0 +1,10 @@
+{
+  "name": "custom-plugin-server-side-game-dev",
+  "displayName": "Server-Side Game Development Plugin",
+  "description": "Multiplayer game server development with networking, matchmaking, state synchronization, and deployment automation",
+  "category": "game-development",
+  "tags": ["multiplayer", "game-server", "networking", "real-time"],
+  "source": "./",
+  "verified": true,
+  "featured": false
+}
