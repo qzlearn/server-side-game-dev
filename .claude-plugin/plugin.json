@@ -1,7 +1,8 @@
 {
   "name": "server-side-game-dev-plugin",
-  "version": "3.1.0",
-  "description": "Comprehensive server-side game development plugin with 7 agents and 17 skills covering networking, concurrency, databases, and cloud deployment for multiplayer games",
+  "version": "3.2.0",
+  "sasmp_version": "1.3.0",
+  "description": "Production-grade server-side game development plugin with 8 agents and 17 skills covering networking, concurrency, databases, monitoring, and cloud deployment for multiplayer games",
   "author": {
     "name": "Dr. Umit Kacar & Muhsin Elcicek",
     "email": "kacarumit.phd@gmail.com",
@@ -22,6 +23,9 @@
     "grpc",
     "protobuf",
     "concurrency",
+    "liveops",
+    "monitoring",
+    "observability",
     "claude-code",
     "plugin"
   ],
@@ -32,7 +36,8 @@
     "./agents/04-state-sync-expert.md",
     "./agents/05-game-loop-developer.md",
     "./agents/06-database-specialist.md",
-    "./agents/07-devops-deployment.md"
+    "./agents/07-devops-deployment.md",
+    "./agents/08-liveops-specialist.md"
   ],
   "commands": [
     "./commands/server-init.md",
@@ -59,5 +64,33 @@
     "./skills/io-multiplexing/SKILL.md",
     "./skills/async-programming/SKILL.md"
   ],
+  "agent_skill_bonds": {
+    "01-game-server-architect": {
+      "primary": ["programming-languages"],
+      "secondary": ["multithreading", "design-patterns", "security-encryption", "message-queues", "async-programming"]
+    },
+    "02-networking-specialist": {
+      "primary": ["networking", "io-multiplexing"],
+      "secondary": ["socket-programming", "data-serialization", "communication-protocols"]
+    },
+    "03-matchmaking-engineer": {
+      "primary": ["matchmaking"]
+    },
+    "04-state-sync-expert": {
+      "primary": ["state-sync"]
+    },
+    "05-game-loop-developer": {
+      "primary": ["game-loop"]
+    },
+    "06-database-specialist": {
+      "primary": ["databases"]
+    },
+    "07-devops-deployment": {
+      "primary": ["deployment"]
+    },
+    "08-liveops-specialist": {
+      "primary": ["monitoring"]
+    }
+  },
   "hooks": "./hooks/hooks.json"
 }

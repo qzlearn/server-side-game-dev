@@ -1,9 +1,45 @@
 ---
 name: data-serialization
-description: Efficient data serialization for game networking including Protobuf, FlatBuffers, and custom binary formats
+description: Efficient data serialization for game networking including Protobuf, FlatBuffers, and custom binary
 sasmp_version: "1.3.0"
+version: "2.0.0"
 bonded_agent: 02-networking-specialist
 bond_type: SECONDARY_BOND
+
+# Parameters
+parameters:
+  required:
+    - format
+  optional:
+    - compression
+    - schema_validation
+  validation:
+    format:
+      type: string
+      enum: [protobuf, flatbuffers, msgpack, json, custom_binary]
+    compression:
+      type: string
+      enum: [none, lz4, zstd]
+      default: none
+    schema_validation:
+      type: boolean
+      default: true
+
+# Retry Configuration
+retry_config:
+  max_attempts: 1
+  fallback: json
+
+# Observability
+observability:
+  logging:
+    level: debug
+    fields: [format, size_bytes, compression_ratio]
+  metrics:
+    - name: serialization_duration_ms
+      type: histogram
+    - name: serialized_bytes
+      type: counter
 ---
 
 # Data Serialization for Games
@@ -14,16 +50,15 @@ Implement **efficient serialization** for low-latency game networking.
 
 | Format | Size | Speed | Schema | Use Case |
 |--------|------|-------|--------|----------|
-| **Protobuf** | Small | Fast | Required | Most games |
-| **FlatBuffers** | Small | Fastest | Required | Real-time |
-| **MessagePack** | Small | Fast | Optional | Flexible |
-| **JSON** | Large | Slow | None | Debug/lobby |
-| **Custom Binary** | Smallest | Fastest | Custom | Ultra-low latency |
+| Protobuf | Small | Fast | Required | Most games |
+| FlatBuffers | Small | Fastest | Required | Real-time |
+| MsgPack | Small | Fast | Optional | Flexible |
+| JSON | Large | Slow | None | Debug |
+| Custom Binary | Smallest | Fastest | Custom | Ultra-low latency |
 
-## Protocol Buffers Example
+## Protocol Buffers
 
 ```protobuf
-// game_messages.proto
 syntax = "proto3";
 
 message PlayerState {
@@ -31,9 +66,7 @@ message PlayerState {
     float x = 2;
     float y = 3;
     float z = 4;
-    float yaw = 5;
-    uint32 health = 6;
-    repeated uint32 inventory = 7;
+    uint32 health = 5;
 }
 
 message GameUpdate {
@@ -43,7 +76,6 @@ message GameUpdate {
 ```
 
 ```cpp
-// C++ usage
 GameUpdate update;
 update.set_tick(current_tick);
 auto* player = update.add_players();
@@ -52,23 +84,6 @@ player->set_x(pos.x);
 
 std::string serialized;
 update.SerializeToString(&serialized);
-```
-
-## FlatBuffers (Zero-copy)
-
-```flatbuffers
-// game.fbs
-table PlayerState {
-    id: uint;
-    position: Vec3;
-    velocity: Vec3;
-}
-
-struct Vec3 {
-    x: float;
-    y: float;
-    z: float;
-}
 ```
 
 ## Custom Binary Format
@@ -87,7 +102,6 @@ struct PlayerUpdate {
     uint8_t flags;
 };
 
-// Write with proper byte order
 void serialize(Buffer& buf, const PlayerUpdate& p) {
     buf.write_u32(htonl(p.player_id));
     for (int i = 0; i < 3; i++)
@@ -101,9 +115,53 @@ void serialize(Buffer& buf, const PlayerUpdate& p) {
 
 | Technique | Savings | Complexity |
 |-----------|---------|------------|
-| Delta compression | 50-80% | Medium |
+| Delta | 50-80% | Medium |
 | Quantization | 30-50% | Low |
-| Dictionary encoding | 40-60% | High |
-| LZ4 compression | 50-70% | Low |
+| LZ4 | 50-70% | Low |
 
-See `assets/` for serialization benchmarks.
+## Troubleshooting
+
+### Common Failure Modes
+
+| Error | Root Cause | Solution |
+|-------|------------|----------|
+| Parse error | Version mismatch | Schema versioning |
+| Large packets | No compression | Enable delta/LZ4 |
+| Slow parsing | JSON in hot path | Use binary format |
+| Corruption | Byte order | Use htonl/ntohl |
+
+### Debug Checklist
+
+```cpp
+// Check serialized size
+std::string data;
+message.SerializeToString(&data);
+std::cout << "Size: " << data.size() << " bytes\n";
+
+// Validate roundtrip
+Message parsed;
+parsed.ParseFromString(data);
+assert(parsed.id() == message.id());
+```
+
+## Unit Test Template
+
+```cpp
+TEST(Serialization, RoundTrip) {
+    PlayerState original{1, 10.0f, 20.0f, 30.0f, 100};
+
+    std::string data;
+    original.SerializeToString(&data);
+
+    PlayerState parsed;
+    parsed.ParseFromString(data);
+
+    EXPECT_EQ(original.player_id(), parsed.player_id());
+    EXPECT_FLOAT_EQ(original.x(), parsed.x());
+}
+```
+
+## Resources
+
+- `assets/` - Schema templates
+- `references/` - Format benchmarks
