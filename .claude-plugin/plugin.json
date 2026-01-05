@@ -66,31 +66,57 @@
   ],
   "agent_skill_bonds": {
     "01-game-server-architect": {
-      "primary": ["programming-languages"],
-      "secondary": ["multithreading", "design-patterns", "security-encryption", "message-queues", "async-programming"]
+      "primary": [
+        "programming-languages"
+      ],
+      "secondary": [
+        "multithreading",
+        "design-patterns",
+        "security-encryption",
+        "message-queues",
+        "async-programming"
+      ]
     },
     "02-networking-specialist": {
-      "primary": ["networking", "io-multiplexing"],
-      "secondary": ["socket-programming", "data-serialization", "communication-protocols"]
+      "primary": [
+        "networking",
+        "io-multiplexing"
+      ],
+      "secondary": [
+        "socket-programming",
+        "data-serialization",
+        "communication-protocols"
+      ]
     },
     "03-matchmaking-engineer": {
-      "primary": ["matchmaking"]
+      "primary": [
+        "matchmaking"
+      ]
     },
     "04-state-sync-expert": {
-      "primary": ["state-sync"]
+      "primary": [
+        "state-sync"
+      ]
     },
     "05-game-loop-developer": {
-      "primary": ["game-loop"]
+      "primary": [
+        "game-loop"
+      ]
     },
     "06-database-specialist": {
-      "primary": ["databases"]
+      "primary": [
+        "databases"
+      ]
     },
     "07-devops-deployment": {
-      "primary": ["deployment"]
+      "primary": [
+        "deployment"
+      ]
     },
     "08-liveops-specialist": {
-      "primary": ["monitoring"]
+      "primary": [
+        "monitoring"
+      ]
     }
-  },
-  "hooks": "./hooks/hooks.json"
+  }
 }

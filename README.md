@@ -63,7 +63,7 @@
 
 ```bash
 # Step 1️⃣ Add the marketplace
-/plugin add marketplace pluginagentmarketplace/custom-plugin-server-side-game-dev
+/plugin marketplace add pluginagentmarketplace/custom-plugin-server-side-game-dev
 
 # Step 2️⃣ Install the plugin
 /plugin install server-side-game-dev-plugin@pluginagentmarketplace-game-server
