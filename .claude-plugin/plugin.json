@@ -1,7 +1,6 @@
 {
   "name": "server-side-game-dev-plugin",
   "version": "3.2.0",
-  "sasmp_version": "1.3.0",
   "description": "Production-grade server-side game development plugin with 8 agents and 17 skills covering networking, concurrency, databases, monitoring, and cloud deployment for multiplayer games",
   "author": {
     "name": "Dr. Umit Kacar & Muhsin Elcicek",
